@@ -1,34 +1,131 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background: #ffffff;
+  color: #000000;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.demo-app {
+  min-height: 100vh;
+  padding: 40px 20px;
+  padding-bottom: 100px;
 }
 
-.App-link {
-    color: #61dafb;
+.demo-header {
+  max-width: 1200px;
+  margin: 0 auto 40px;
+  text-align: center;
+  padding: 40px;
+  border: 4px solid #000000;
+  background: #ffffff;
+  box-shadow: 8px 8px 0 #000000;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.demo-header h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  letter-spacing: -1px;
+}
+
+.demo-header p {
+  font-size: 1.125rem;
+  color: #666666;
+}
+
+.demo-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.demo-card {
+  padding: 32px;
+  border: 4px solid #000000;
+  background: #ffffff;
+  box-shadow: 6px 6px 0 #000000;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.demo-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 #000000;
+}
+
+.demo-card h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  border-bottom: 3px solid #00FF66;
+  padding-bottom: 8px;
+}
+
+.count-display {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 20px 0;
+  color: #00FF66;
+}
+
+.demo-btn {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  background: #000000;
+  color: #ffffff;
+  border: 3px solid #000000;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #00FF66;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.demo-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #00FF66;
+}
+
+.demo-btn:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0 #00FF66;
+}
+
+.demo-btn.error {
+  box-shadow: 4px 4px 0 #FF0066;
+}
+
+.demo-btn.error:hover {
+  box-shadow: 6px 6px 0 #FF0066;
+}
+
+.items-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.item {
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.item strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #00FF66;
+}
+
+.item p {
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
