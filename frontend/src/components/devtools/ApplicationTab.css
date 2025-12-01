@@ -1,0 +1,276 @@
+.application-tab {
+  height: 100%;
+  background: #ffffff;
+}
+
+.application-scroll {
+  height: 100%;
+}
+
+.app-section {
+  padding: 20px;
+  border-bottom: 3px solid #000000;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #000000;
+  border-bottom: 3px solid #00FF66;
+  padding-bottom: 4px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 2px solid #000000;
+  background: #ffffff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #666666;
+}
+
+.status-dot.active {
+  background: #00FF66;
+  box-shadow: 0 0 8px #00FF66;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.inactive {
+  background: #FF0066;
+}
+
+.section-action {
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.section-action:hover {
+  background: #FF0066;
+  color: #ffffff;
+}
+
+.section-empty {
+  padding: 40px;
+  text-align: center;
+  color: #999999;
+  font-style: italic;
+  border: 2px dashed #cccccc;
+}
+
+.sw-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sw-item {
+  padding: 16px;
+  border: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.sw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sw-state {
+  padding: 4px 10px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border: 2px solid #000000;
+  text-transform: uppercase;
+}
+
+.sw-state.activated {
+  background: #00FF66;
+  color: #000000;
+}
+
+.sw-state.installing,
+.sw-state.waiting {
+  background: #FFA500;
+  color: #000000;
+}
+
+.sw-action {
+  padding: 4px 10px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sw-action:hover {
+  background: #FF0066;
+  color: #ffffff;
+}
+
+.sw-detail {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-family: 'Courier New', monospace;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #666666;
+  min-width: 80px;
+}
+
+.detail-value {
+  color: #000000;
+  word-break: break-all;
+}
+
+.cache-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cache-item {
+  padding: 16px;
+  border: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.cache-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cache-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cache-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #000000;
+}
+
+.cache-count {
+  font-size: 0.75rem;
+  color: #666666;
+}
+
+.cache-action {
+  padding: 4px 10px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cache-action:hover {
+  background: #FF0066;
+  color: #ffffff;
+}
+
+.cache-urls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cache-url {
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  color: #666666;
+  padding: 4px 8px;
+  background: #ffffff;
+  border-left: 3px solid #00FF66;
+}
+
+.cache-more {
+  font-size: 0.75rem;
+  color: #999999;
+  font-style: italic;
+  padding: 4px 8px;
+}
+
+.manifest-content {
+  padding: 16px;
+  background: #f9f9f9;
+  border: 2px solid #000000;
+}
+
+.manifest-json {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.info-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.info-label {
+  font-weight: 600;
+  min-width: 140px;
+  color: #666666;
+}
+
+.info-value {
+  color: #000000;
+  word-break: break-all;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+.info-value.online {
+  color: #00FF66;
+  font-weight: 600;
+}
+
+.info-value.offline {
+  color: #FF0066;
+  font-weight: 600;
+}
