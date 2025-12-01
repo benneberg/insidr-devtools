@@ -1,0 +1,263 @@
+.monitor-tab {
+  height: 100%;
+  background: #ffffff;
+}
+
+.monitor-scroll {
+  height: 100%;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 3px solid #000000;
+}
+
+.metric-card {
+  padding: 20px;
+  border: 3px solid #000000;
+  background: #ffffff;
+  box-shadow: 6px 6px 0 #000000;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 #000000;
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.metric-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.metric-status {
+  padding: 4px 10px;
+  font-weight: 600;
+  font-size: 0.7rem;
+  border: 2px solid #000000;
+  text-transform: uppercase;
+}
+
+.metric-status.excellent {
+  background: #00FF66;
+  color: #000000;
+}
+
+.metric-status.good {
+  background: #99FF66;
+  color: #000000;
+}
+
+.metric-status.fair {
+  background: #FFA500;
+  color: #000000;
+}
+
+.metric-status.poor {
+  background: #FF0066;
+  color: #ffffff;
+}
+
+.metric-value {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 12px 0;
+  line-height: 1;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: #666666;
+  margin-bottom: 16px;
+}
+
+.metric-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  background: #f9f9f9;
+  border-left: 3px solid #00FF66;
+  font-size: 0.75rem;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #666666;
+}
+
+.detail-value {
+  font-family: 'Courier New', monospace;
+  color: #000000;
+  font-weight: 600;
+}
+
+.chart-container {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.chart-label {
+  font-size: 0.75rem;
+  color: #666666;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 60px;
+  background: #f9f9f9;
+  padding: 4px;
+  border: 2px solid #000000;
+}
+
+.chart-bar {
+  flex: 1;
+  min-width: 3px;
+  background: #00FF66;
+  transition: height 0.3s;
+}
+
+.resources-section {
+  padding: 20px;
+  border-bottom: 3px solid #000000;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #000000;
+  border-bottom: 3px solid #00FF66;
+  padding-bottom: 4px;
+}
+
+.resource-count {
+  font-size: 0.875rem;
+  color: #666666;
+  font-weight: 600;
+}
+
+.resources-table {
+  border: 2px solid #000000;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 100px;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #f9f9f9;
+  border-bottom: 2px solid #000000;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.table-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 100px 100px;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+}
+
+.table-row:hover {
+  background: #f9f9f9;
+}
+
+.col-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.col-type {
+  text-transform: uppercase;
+  color: #9966FF;
+  font-weight: 600;
+}
+
+.col-size {
+  color: #0099FF;
+  font-weight: 600;
+}
+
+.col-duration {
+  color: #FF6600;
+  font-weight: 600;
+}
+
+.table-empty {
+  padding: 40px;
+  text-align: center;
+  color: #999999;
+  font-style: italic;
+}
+
+.info-section {
+  padding: 20px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.info-label {
+  font-weight: 600;
+  min-width: 120px;
+  color: #666666;
+}
+
+.info-value {
+  color: #000000;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
