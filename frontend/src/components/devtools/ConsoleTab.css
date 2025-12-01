@@ -1,0 +1,189 @@
+.console-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+}
+
+.console-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.console-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn {
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.filter-btn:hover {
+  background: #f0f0f0;
+}
+
+.filter-btn.active {
+  background: #000000;
+  color: #ffffff;
+  border-color: #00FF66;
+}
+
+.console-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.export-btn,
+.clear-btn {
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.export-btn:hover {
+  background: #00FF66;
+}
+
+.clear-btn:hover {
+  background: #FF0066;
+  color: #ffffff;
+}
+
+.console-output {
+  flex: 1;
+  background: #ffffff;
+}
+
+.console-logs {
+  padding: 8px;
+}
+
+.console-log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-left: 3px solid #cccccc;
+  margin-bottom: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  align-items: flex-start;
+}
+
+.console-log-entry.log {
+  border-left-color: #00FF66;
+}
+
+.console-log-entry.warn {
+  border-left-color: #FFA500;
+  background: #FFF9E6;
+}
+
+.console-log-entry.error {
+  border-left-color: #FF0066;
+  background: #FFE6F0;
+}
+
+.console-log-entry.info {
+  border-left-color: #0099FF;
+  background: #E6F5FF;
+}
+
+.console-log-entry.command {
+  border-left-color: #9966FF;
+  background: #F2E6FF;
+}
+
+.console-log-entry.result {
+  border-left-color: #00FF66;
+  background: #E6FFE6;
+}
+
+.log-timestamp {
+  color: #999999;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.log-type-icon {
+  font-weight: 700;
+  min-width: 20px;
+}
+
+.log-message {
+  flex: 1;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: 'Courier New', monospace;
+}
+
+.console-empty {
+  padding: 40px;
+  text-align: center;
+  color: #999999;
+  font-style: italic;
+}
+
+.console-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-top: 2px solid #000000;
+  background: #f9f9f9;
+}
+
+.console-prompt {
+  font-weight: 700;
+  color: #00FF66;
+  font-size: 1rem;
+}
+
+.console-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #000000;
+  background: #ffffff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.console-input:focus {
+  border-color: #00FF66;
+}
+
+.execute-btn {
+  padding: 8px 16px;
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.execute-btn:hover {
+  background: #00FF66;
+  color: #000000;
+}
