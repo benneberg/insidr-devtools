@@ -9,6 +9,8 @@ import ApplicationTab from './devtools/ApplicationTab';
 import MonitorTab from './devtools/MonitorTab';
 import ScriptRunnerTab from './devtools/ScriptRunnerTab';
 import SourcesTab from './devtools/SourcesTab';
+import SystemInfoTab from './devtools/SystemInfoTab';
+import QuickActionsPanel from './devtools/QuickActionsPanel';
 import './DevTools.css';
 
 const DevTools = () => {
