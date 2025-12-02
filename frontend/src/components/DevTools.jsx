@@ -100,6 +100,8 @@ const DevTools = () => {
             <TabsTrigger value="storage" data-testid="tab-storage">Storage</TabsTrigger>
             <TabsTrigger value="application" data-testid="tab-application">Application</TabsTrigger>
             <TabsTrigger value="monitor" data-testid="tab-monitor">Monitor</TabsTrigger>
+            <TabsTrigger value="system" data-testid="tab-system">System Info</TabsTrigger>
+            <TabsTrigger value="actions" data-testid="tab-actions">Quick Actions</TabsTrigger>
             <TabsTrigger value="runner" data-testid="tab-runner">Script Runner</TabsTrigger>
           </TabsList>
 
