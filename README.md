@@ -8,7 +8,7 @@
 
 ---
 
-## 🚀 Features at a Glance
+## Features at a Glance
 
 ### 10 Comprehensive Tabs
 
@@ -23,7 +23,7 @@
 9. **Quick Actions** 🆕 - Emergency controls & auto-refresh
 10. **Script Runner** - Custom JavaScript executor
 
-### Signage-Specific Features 🎯
+### Signage-Specific Features 
 
 - ⏱️ **Uptime Tracking**: Monitor display runtime
 - 🔄 **Auto-Refresh**: Prevent memory leaks (scheduled + threshold-based)
@@ -36,7 +36,7 @@
 
 ---
 
-## 🎨 Design Philosophy
+##  Design Philosophy
 
 ### Neo-Brutalism Aesthetic
 
@@ -48,7 +48,7 @@
 
 ---
 
-## 📦 Quick Start
+## Quick Start
 
 ### React Integration
 
