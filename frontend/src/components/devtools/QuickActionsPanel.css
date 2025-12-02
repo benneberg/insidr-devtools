@@ -1,0 +1,139 @@
+.quick-actions-panel {
+  padding: 20px;
+  background: #ffffff;
+}
+
+.panel-header {
+  margin-bottom: 20px;
+}
+
+.panel-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+  border-bottom: 3px solid #00FF66;
+  padding-bottom: 8px;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.emergency-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border: 3px solid #000000;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  box-shadow: 4px 4px 0 #000000;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.emergency-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #00FF66;
+}
+
+.emergency-btn:active {
+  transform: translate(0, 0);
+  box-shadow: 2px 2px 0 #00FF66;
+}
+
+.emergency-btn.danger:hover {
+  box-shadow: 6px 6px 0 #FF0066;
+}
+
+.btn-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.btn-content {
+  flex: 1;
+  text-align: left;
+}
+
+.btn-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #000000;
+  margin-bottom: 4px;
+}
+
+.btn-subtitle {
+  font-size: 0.7rem;
+  color: #666666;
+  font-weight: 500;
+}
+
+.panel-section {
+  padding: 20px;
+  border: 3px solid #000000;
+  background: #f9f9f9;
+}
+
+.panel-section h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #00FF66;
+  padding-bottom: 4px;
+}
+
+.refresh-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.control-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.control-group label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  min-width: 140px;
+}
+
+.control-group input[type="number"] {
+  padding: 8px 12px;
+  border: 2px solid #000000;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.875rem;
+  width: 100px;
+  outline: none;
+}
+
+.control-group input[type="number"]:focus {
+  border-color: #00FF66;
+}
+
+.control-group input[type="number"]:disabled {
+  background: #e0e0e0;
+  cursor: not-allowed;
+}
