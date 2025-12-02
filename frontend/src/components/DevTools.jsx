@@ -134,6 +134,14 @@ const DevTools = () => {
               <MonitorTab />
             </TabsContent>
             
+            <TabsContent value="system" className="tab-content">
+              <SystemInfoTab />
+            </TabsContent>
+            
+            <TabsContent value="actions" className="tab-content">
+              <QuickActionsPanel />
+            </TabsContent>
+            
             <TabsContent value="runner" className="tab-content">
               <ScriptRunnerTab />
             </TabsContent>
