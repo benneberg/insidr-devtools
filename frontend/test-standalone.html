@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevTools Standalone Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border: 3px solid #000;
+            box-shadow: 8px 8px 0 #000;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: #000;
+            text-shadow: 3px 3px 0 #00ff66;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 40px;
+            font-weight: 500;
+        }
+
+        .test-section {
+            background: #f8f8f8;
+            border: 2px solid #000;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .test-section h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #000;
+            border-bottom: 3px solid #00ff66;
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: #fff;
+            border: 3px solid #000;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: #00ff66;
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        button:active {
+            transform: translate(0, 0);
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        .info-box {
+            background: #fff;
+            border: 2px solid #000;
+            border-left: 6px solid #00ff66;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .data-display {
+            background: #000;
+            color: #00ff66;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            margin-top: 15px;
+            border: 2px solid #00ff66;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #00ff66;
+            color: #000;
+            font-weight: 700;
+            border: 2px solid #000;
+            margin-left: 10px;
+            font-size: 0.9rem;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 3px solid #000;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .instructions h3 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        code {
+            background: #000;
+            color: #00ff66;
+            padding: 2px 8px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #00ff66;
+        }
+    </style>
+    
+    <!-- Include the DevTools CSS -->
+    <link rel="stylesheet" href="./dist/devtools.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ DevTools Test Page</h1>
+        <p class="subtitle">Test the standalone Custom DevTools implementation</p>
+
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li>Build the DevTools bundle: <code>npm run build:devtools</code></li>
+                <li>Look for the <strong>green toggle button</strong> at the bottom-right corner</li>
+                <li>Click it to open the DevTools panel</li>
+                <li>Use the test buttons below to generate logs, network requests, and storage data</li>
+                <li>Explore all 10 tabs in the DevTools!</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>🖥️ Console Tests</h2>
+            <p>Test console logging and JavaScript execution</p>
+            <div class="button-group">
+                <button onclick="testConsoleLog()">Console.log</button>
+                <button onclick="testConsoleWarn()">Console.warn</button>
+                <button onclick="testConsoleError()">Console.error</button>
+                <button onclick="testConsoleInfo()">Console.info</button>
+                <button onclick="testMultipleLogs()">Multiple Logs</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🌐 Network Tests</h2>
+            <p>Test network request interception</p>
+            <div class="button-group">
+                <button onclick="testFetchGet()">Fetch GET</button>
+                <button onclick="testFetchPost()">Fetch POST</button>
+                <button onclick="testXHR()">XMLHttpRequest</button>
+                <button onclick="testMultipleRequests()">Multiple Requests</button>
+                <button onclick="testFailedRequest()">Failed Request</button>
+            </div>
+            <div id="networkResult" class="data-display" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>💾 Storage Tests</h2>
+            <p>Test localStorage, sessionStorage, and cookies</p>
+            <div class="button-group">
+                <button onclick="testLocalStorage()">Add localStorage</button>
+                <button onclick="testSessionStorage()">Add sessionStorage</button>
+                <button onclick="testCookies()">Add Cookie</button>
+                <button onclick="clearAllStorage()">Clear All Storage</button>
+            </div>
+            <div class="info-box">
+                <strong>Current Storage:</strong>
+                <div id="storageInfo" class="data-display"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎨 DOM Tests</h2>
+            <p>Test DOM manipulation and inspection</p>
+            <div class="button-group">
+                <button onclick="addElement()">Add Element</button>
+                <button onclick="modifyElement()">Modify Element</button>
+                <button onclick="removeElement()">Remove Element</button>
+            </div>
+            <div id="dynamicContent" style="margin-top: 20px;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚡ Performance Tests</h2>
+            <p>Test performance monitoring</p>
+            <div class="button-group">
+                <button onclick="heavyComputation()">Heavy CPU Task</button>
+                <button onclick="memoryTest()">Memory Test</button>
+                <button onclick="animationTest()">Animation Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the DevTools bundle -->
+    <script src="./dist/devtools.bundle.js"></script>
+    
+    <!-- Initialize DevTools -->
+    <script>
+        // Initialize DevTools when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.CustomDevTools) {
+                window.CustomDevTools.init({
+                    enabled: true,
+                    startOpen: false
+                });
+                console.log('✅ DevTools initialized successfully!');
+            } else {
+                console.error('❌ DevTools not found. Make sure to run: npm run build:devtools');
+            }
+        });
+
+        // Console Tests
+        function testConsoleLog() {
+            console.log('✅ This is a test log message', { timestamp: new Date().toISOString() });
+        }
+
+        function testConsoleWarn() {
+            console.warn('⚠️ This is a test warning', { level: 'warning', code: 'WARN_001' });
+        }
+
+        function testConsoleError() {
+            console.error('❌ This is a test error', new Error('Sample error'));
+        }
+
+        function testConsoleInfo() {
+            console.info('ℹ️ This is informational', { version: '1.0.0', status: 'ok' });
+        }
+
+        function testMultipleLogs() {
+            for (let i = 1; i <= 10; i++) {
+                console.log(`Log message ${i}`, { iteration: i });
+            }
+        }
+
+        // Network Tests
+        async function testFetchGet() {
+            console.log('🌐 Starting GET request...');
+            try {
+                const response = await fetch('https://jsonplaceholder.typicode.com/posts/1');
+                const data = await response.json();
+                console.log('✅ GET request successful:', data);
+                document.getElementById('networkResult').style.display = 'block';
+                document.getElementById('networkResult').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('❌ GET request failed:', error);
+            }
+        }
+
+        async function testFetchPost() {
+            console.log('🌐 Starting POST request...');
+            try {
+                const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: 'Test Post', body: 'Test body', userId: 1 })
+                });
+                const data = await response.json();
+                console.log('✅ POST request successful:', data);
+                document.getElementById('networkResult').style.display = 'block';
+                document.getElementById('networkResult').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('❌ POST request failed:', error);
+            }
+        }
+
+        function testXHR() {
+            console.log('🌐 Starting XMLHttpRequest...');
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://jsonplaceholder.typicode.com/users/1');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    console.log('✅ XHR request successful:', JSON.parse(xhr.responseText));
+                    document.getElementById('networkResult').style.display = 'block';
+                    document.getElementById('networkResult').textContent = xhr.responseText;
+                }
+            };
+            xhr.onerror = function() {
+                console.error('❌ XHR request failed');
+            };
+            xhr.send();
+        }
+
+        async function testMultipleRequests() {
+            console.log('🌐 Starting multiple requests...');
+            const urls = [
+                'https://jsonplaceholder.typicode.com/posts/1',
+                'https://jsonplaceholder.typicode.com/users/1',
+                'https://jsonplaceholder.typicode.com/comments/1'
+            ];
+            
+            try {
+                const responses = await Promise.all(urls.map(url => fetch(url)));
+                console.log(`✅ All ${responses.length} requests completed`);
+            } catch (error) {
+                console.error('❌ Multiple requests failed:', error);
+            }
+        }
+
+        async function testFailedRequest() {
+            console.log('🌐 Testing failed request...');
+            try {
+                await fetch('https://invalid-url-that-does-not-exist.com/api/data');
+            } catch (error) {
+                console.error('❌ Expected error:', error.message);
+            }
+        }
+
+        // Storage Tests
+        function testLocalStorage() {
+            const timestamp = new Date().toISOString();
+            localStorage.setItem('test_key_' + Date.now(), 'Test value at ' + timestamp);
+            localStorage.setItem('user_data', JSON.stringify({ name: 'John Doe', role: 'Developer' }));
+            console.log('💾 Added items to localStorage');
+            updateStorageInfo();
+        }
+
+        function testSessionStorage() {
+            const timestamp = new Date().toISOString();
+            sessionStorage.setItem('session_key_' + Date.now(), 'Session value at ' + timestamp);
+            sessionStorage.setItem('temp_data', JSON.stringify({ session_id: '12345' }));
+            console.log('💾 Added items to sessionStorage');
+            updateStorageInfo();
+        }
+
+        function testCookies() {
+            document.cookie = `test_cookie=${Date.now()}; path=/`;
+            document.cookie = `user_pref=dark_mode; path=/; max-age=3600`;
+            console.log('🍪 Added cookies');
+            updateStorageInfo();
+        }
+
+        function clearAllStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            console.log('🗑️ Cleared all storage');
+            updateStorageInfo();
+        }
+
+        function updateStorageInfo() {
+            const info = {
+                localStorage: Object.keys(localStorage).length + ' items',
+                sessionStorage: Object.keys(sessionStorage).length + ' items',
+                cookies: document.cookie.split(';').filter(c => c.trim()).length + ' cookies'
+            };
+            document.getElementById('storageInfo').textContent = JSON.stringify(info, null, 2);
+        }
+
+        // DOM Tests
+        let elementCounter = 0;
+        function addElement() {
+            elementCounter++;
+            const div = document.createElement('div');
+            div.id = 'dynamic-' + elementCounter;
+            div.className = 'info-box';
+            div.style.marginTop = '10px';
+            div.innerHTML = `<strong>Dynamic Element #${elementCounter}</strong><br>Created at: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('dynamicContent').appendChild(div);
+            console.log('➕ Added element #' + elementCounter);
+        }
+
+        function modifyElement() {
+            const lastElement = document.getElementById('dynamic-' + elementCounter);
+            if (lastElement) {
+                lastElement.style.background = '#00ff66';
+                lastElement.style.color = '#000';
+                console.log('✏️ Modified element #' + elementCounter);
+            } else {
+                console.warn('⚠️ No element to modify');
+            }
+        }
+
+        function removeElement() {
+            const lastElement = document.getElementById('dynamic-' + elementCounter);
+            if (lastElement) {
+                lastElement.remove();
+                console.log('➖ Removed element #' + elementCounter);
+                elementCounter--;
+            } else {
+                console.warn('⚠️ No element to remove');
+            }
+        }
+
+        // Performance Tests
+        function heavyComputation() {
+            console.log('⚡ Starting heavy computation...');
+            const start = performance.now();
+            let result = 0;
+            for (let i = 0; i < 10000000; i++) {
+                result += Math.sqrt(i);
+            }
+            const duration = performance.now() - start;
+            console.log(`✅ Computation complete in ${duration.toFixed(2)}ms`);
+        }
+
+        function memoryTest() {
+            console.log('💾 Creating large array...');
+            const largeArray = new Array(1000000).fill({ data: 'test' });
+            console.log(`✅ Created array with ${largeArray.length} items`);
+        }
+
+        function animationTest() {
+            console.log('🎬 Starting animation...');
+            let count = 0;
+            const interval = setInterval(() => {
+                count++;
+                console.log(`Frame ${count}`);
+                if (count >= 60) {
+                    clearInterval(interval);
+                    console.log('✅ Animation complete');
+                }
+            }, 16);
+        }
+
+        // Initialize storage info on load
+        updateStorageInfo();
+
+        // Add some initial data for testing
+        console.log('🎉 Test page loaded successfully!');
+        console.log('📱 DevTools available via toggle button (bottom-right)');
+        console.info('ℹ️ Page info:', {
+            title: document.title,
+            url: window.location.href,
+            userAgent: navigator.userAgent
+        });
+    </script>
+</body>
+</html>

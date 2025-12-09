@@ -11,8 +11,13 @@ const ElementsTab = () => {
   useEffect(() => {
     buildDomTree();
     
+    // Debounce the mutation observer to prevent infinite loops
+    let timeoutId;
     const observer = new MutationObserver(() => {
-      buildDomTree();
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        buildDomTree();
+      }, 300); // Wait 300ms before rebuilding tree
     });
     
     observer.observe(document.body, {
@@ -21,12 +26,20 @@ const ElementsTab = () => {
       attributes: true
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const buildDomTree = () => {
     const parseElement = (element, depth = 0) => {
-      if (!element || element.classList?.contains('devtools-container')) {
+      // Exclude DevTools and its children from the tree
+      if (!element || 
+          element.classList?.contains('devtools-container') ||
+          element.id === 'custom-devtools-root' ||
+          element.closest('#custom-devtools-root') ||
+          element.closest('.devtools-container')) {
         return null;
       }
 
