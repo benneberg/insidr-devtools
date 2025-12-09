@@ -1,4 +1,4 @@
-# Use the iNsidr DevTools in tour app  
+# Use the iNsidr DevTools in your app  
 
 Include in Your HTML  
 
