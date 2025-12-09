@@ -18,3 +18,8 @@ Include in Your HTML
 </body>
 </html>
 ```
+## From this dir it would be  
+```
+https://raw.githubusercontent.com/benneberg/insidr-devtools/main/remote-testscript/devtools.bundle.js
+https://raw.githubusercontent.com/benneberg/insidr-devtools/main/remote-testscript/devtools.css
+```
