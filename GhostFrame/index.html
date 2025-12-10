@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta HTTP-EQUIV="Expires" CONTENT="-1" />
+    <meta HTTP-EQUIV="Pragma" CONTENT="no-cache" />
+
+    <style>
+        html, body {
+            margin: 0;
+            background-color: #fff;
+            display: flex;
+            overflow: hidden;
+        }
+
+        iframe {
+            position: absolute;
+            z-index: 0;
+            left: 0px;
+            top: 0px;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <iframe src="player.html" sandbox="allow-same-origin allow-scripts" allow="camera *; microphone *; autoplay *"></iframe>
+</body>
+</html>
