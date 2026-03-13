@@ -1,109 +1,199 @@
-import { useState, useEffect } from 'react';
-import '@/App.css';
-import DevTools from './components/DevTools';
+import { useState } from 'react';
+import { useRemoteSession } from './hooks/useRemoteSession';
+import './App.css';
 
-// Demo page to showcase the DevTools
-function App() {
-  const [count, setCount] = useState(0);
-  const [items, setItems] = useState([]);
+const EVENT_TABS = [
+  { id: 'all',         label: 'All' },
+  { id: 'console',     label: 'Console' },
+  { id: 'network',     label: 'Network' },
+  { id: 'error',       label: 'Errors' },
+  { id: 'performance', label: 'Performance' },
+];
 
-  useEffect(() => {
-    // Simulate some console logs
-    console.log('App mounted');
-    console.warn('This is a warning');
-    console.error('This is an error');
-    console.info('App initialized successfully');
+function filterEvents(events, tab) {
+  if (tab === 'all') return events;
+  return events.filter(e => e.type?.startsWith(tab));
+}
 
-    // Add some localStorage data
-    localStorage.setItem('demo_key', 'demo_value');
-    localStorage.setItem('user_preferences', JSON.stringify({ theme: 'light', language: 'en' }));
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString('en-US', { hour12: false });
+}
 
-    // Simulate API calls
-    fetch('https://jsonplaceholder.typicode.com/posts/1')
-      .then(res => res.json())
-      .then(data => {
-        console.log('Fetched data:', data);
-        setItems([data]);
-      })
-      .catch(err => console.error('Fetch error:', err));
-  }, []);
+function EventRow({ event }) {
+  const [expanded, setExpanded] = useState(false);
 
-  const handleClick = () => {
-    setCount(count + 1);
-    console.log(`Button clicked ${count + 1} times`);
+  const typeColor = {
+    'console': '#00FF66',
+    'network': '#0099FF',
+    'error':   '#FF0066',
+    'performance': '#FFA500',
+    'agent':   '#888',
+    'device':  '#888',
   };
 
-  const triggerError = () => {
-    try {
-      throw new Error('Intentional error for testing');
-    } catch (e) {
-      console.error(e);
-    }
+  const prefix = event.type?.split('.')[0];
+  const color = typeColor[prefix] || '#ccc';
+
+  const level = event.payload?.level;
+  const levelColor = {
+    error: '#FF0066', warn: '#FFA500', info: '#0099FF', log: '#ccc', debug: '#888'
   };
 
   return (
-    <div className="demo-app">
-      <div className="demo-header">
-        <h1>Custom DevTools Demo</h1>
-        <p>Try the DevTools by clicking the toggle button at the bottom right</p>
-      </div>
+    <div
+      className="event-row"
+      onClick={() => setExpanded(!expanded)}
+      style={{ borderLeft: `3px solid ${color}` }}
+    >
+      <span className="event-time">{formatTime(event.timestamp)}</span>
+      <span className="event-type" style={{ color }}>{event.type}</span>
 
-      <div className="demo-content">
-        <div className="demo-card">
-          <h2>Counter Example</h2>
-          <p className="count-display">Count: {count}</p>
-          <button 
-            data-testid="increment-btn"
-            className="demo-btn" 
-            onClick={handleClick}
-          >
-            Increment
-          </button>
-        </div>
+      {event.type === 'console' && (
+        <span className="event-summary" style={{ color: levelColor[level] || '#ccc' }}>
+          [{level}] {event.payload?.args?.join(' ')}
+        </span>
+      )}
 
-        <div className="demo-card">
-          <h2>Error Testing</h2>
-          <button 
-            data-testid="trigger-error-btn"
-            className="demo-btn error" 
-            onClick={triggerError}
-          >
-            Trigger Error
-          </button>
-        </div>
+      {event.type === 'network.request' && (
+        <span className="event-summary">
+          {event.payload?.method} {event.payload?.url}
+        </span>
+      )}
 
-        <div className="demo-card">
-          <h2>Network Requests</h2>
-          <button 
-            data-testid="fetch-data-btn"
-            className="demo-btn"
-            onClick={() => {
-              fetch('https://jsonplaceholder.typicode.com/users')
-                .then(res => res.json())
-                .then(data => console.log('Users:', data));
-            }}
-          >
-            Fetch Data
-          </button>
-        </div>
+      {event.type === 'network.response' && (
+        <span className="event-summary" style={{ color: event.payload?.status >= 400 ? '#FF0066' : '#00FF66' }}>
+          {event.payload?.status} · {event.payload?.duration?.toFixed(0)}ms
+        </span>
+      )}
 
-        <div className="demo-card">
-          <h2>Fetched Items</h2>
-          <div className="items-list">
-            {items.map((item, idx) => (
-              <div key={idx} className="item">
-                <strong>{item.title}</strong>
-                <p>{item.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {event.type === 'error' && (
+        <span className="event-summary" style={{ color: '#FF0066' }}>
+          {event.payload?.message}
+        </span>
+      )}
 
-      {/* The DevTools Component */}
-      <DevTools />
+      {event.type === 'performance.metrics' && (
+        <span className="event-summary">
+          heap: {event.payload?.memory
+            ? `${(event.payload.memory.usedJSHeapSize / 1048576).toFixed(1)}MB`
+            : 'n/a'}
+        </span>
+      )}
+
+      {expanded && (
+        <pre className="event-detail">
+          {JSON.stringify(event.payload, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }
 
-export default App;
+function DeviceSession({ device, events, sendCommand, onBack }) {
+  const [activeTab, setActiveTab] = useState('all');
+  const filtered = filterEvents(events, activeTab);
+
+  return (
+    <div className="session-view">
+      <div className="session-header">
+        <button className="back-btn" onClick={onBack}>← Devices</button>
+        <div className="session-device-info">
+          <span className="session-device-id">{device.deviceId}</span>
+          <span className="session-device-url">{device.url}</span>
+        </div>
+        <div className="session-actions">
+          <button className="cmd-btn" onClick={() => sendCommand('agent.enable')}>Enable</button>
+          <button className="cmd-btn" onClick={() => sendCommand('agent.disable')}>Disable</button>
+          <button className="cmd-btn danger" onClick={() => sendCommand('agent.reload')}>Reload</button>
+        </div>
+      </div>
+
+      <div className="event-tabs">
+        {EVENT_TABS.map(tab => (
+          <button
+            key={tab.id}
+            className={`event-tab ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+            <span className="tab-count">
+              {filterEvents(events, tab.id).length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="event-list">
+        {filtered.length === 0 ? (
+          <div className="empty-state">No events yet</div>
+        ) : (
+          [...filtered].reverse().map((event, i) => (
+            <EventRow key={i} event={event} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DeviceList({ devices, onSelect }) {
+  return (
+    <div className="device-list">
+      <h2 className="device-list-title">Connected Devices</h2>
+      {devices.length === 0 ? (
+        <div className="empty-state">
+          No devices connected.<br />
+          <span className="empty-hint">Add the insidr agent script to your app and point it at ws://YOUR_IP:9229</span>
+        </div>
+      ) : (
+        devices.map(device => (
+          <div
+            key={device.deviceId}
+            className="device-card"
+            onClick={() => onSelect(device)}
+          >
+            <div className="device-card-header">
+              <span className="device-dot" />
+              <span className="device-card-id">{device.deviceId}</span>
+            </div>
+            <div className="device-card-url">{device.url}</div>
+            <div className="device-card-meta">
+              Connected: {new Date(device.connectedAt).toLocaleTimeString()}
+              &nbsp;·&nbsp;
+              Last seen: {new Date(device.lastSeen).toLocaleTimeString()}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  const { connected, devices, activeDevice, events, selectDevice, sendCommand, clearDevice } = useRemoteSession();
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <div className="dashboard-logo">insidr</div>
+        <div className={`server-status ${connected ? 'online' : 'offline'}`}>
+          <span className="status-dot" />
+          {connected ? 'Server connected' : 'Connecting to server...'}
+        </div>
+      </div>
+
+      <div className="dashboard-body">
+        {activeDevice ? (
+          <DeviceSession
+            device={activeDevice}
+            events={events}
+            sendCommand={sendCommand}
+            onBack={clearDevice}
+          />
+        ) : (
+          <DeviceList devices={devices} onSelect={selectDevice} />
+        )}
+      </div>
+    </div>
+  );
+}
