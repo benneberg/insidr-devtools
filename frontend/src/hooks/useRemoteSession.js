@@ -8,26 +8,51 @@ export function useRemoteSession() {
   const [activeDevice, setActiveDevice] = useState(null);
   const [events, setEvents] = useState([]);
   const ws = useRef(null);
+  const pingRef = useRef(null);
 
   useEffect(() => {
+    let mounted = true;
+
+    function startPing() {
+      pingRef.current = setInterval(() => {
+        if (ws.current?.readyState === WebSocket.OPEN) {
+          ws.current.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 20000);
+    }
+
+    function stopPing() {
+      if (pingRef.current) {
+        clearInterval(pingRef.current);
+        pingRef.current = null;
+      }
+    }
+
     function connect() {
+      if (!mounted) return;
+
       ws.current = new WebSocket(WS_URL);
 
       ws.current.onopen = () => {
+        if (!mounted) { ws.current.close(); return; }
         setConnected(true);
+        startPing();
       };
 
       ws.current.onclose = () => {
+        stopPing();
+        if (!mounted) return;
         setConnected(false);
         setDevices([]);
         setTimeout(connect, 3000);
       };
 
       ws.current.onerror = () => {
-        ws.current.close();
+        if (ws.current) ws.current.close();
       };
 
       ws.current.onmessage = (msg) => {
+        if (!mounted) return;
         try {
           const data = JSON.parse(msg.data);
           handleMessage(data);
@@ -36,9 +61,12 @@ export function useRemoteSession() {
     }
 
     connect();
+
     return () => {
+      mounted = false;
+      stopPing();
       if (ws.current) {
-        ws.current.onclose = null; // prevent reconnect on unmount
+        ws.current.onclose = null;
         ws.current.close();
       }
     };
@@ -65,12 +93,10 @@ export function useRemoteSession() {
         break;
 
       case 'device.events':
-        // Historical events dump on session start
         setEvents(data.payload.events);
         break;
 
       default:
-        // Live event from active device
         if (data.deviceId) {
           setEvents(prev => {
             const next = [...prev, data];
