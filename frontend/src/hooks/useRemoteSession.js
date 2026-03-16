@@ -8,21 +8,40 @@ export function useRemoteSession() {
   const [activeDevice, setActiveDevice] = useState(null);
   const [events, setEvents] = useState([]);
   const ws = useRef(null);
+  const pingRef = useRef(null);
 
   useEffect(() => {
+
+    function startPing() {
+      pingRef.current = setInterval(() => {
+        if (ws.current?.readyState === WebSocket.OPEN) {
+          ws.current.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 20000);
+    }
+
+    function stopPing() {
+      if (pingRef.current) {
+        clearInterval(pingRef.current);
+        pingRef.current = null;
+      }
+    }
+
     let mounted = true;
 
     function connect() {
       if (!mounted) return;
-      
+
       ws.current = new WebSocket(WS_URL);
 
       ws.current.onopen = () => {
         if (!mounted) { ws.current.close(); return; }
         setConnected(true);
+        startPing();
       };
 
       ws.current.onclose = () => {
+        stopPing();
         if (!mounted) return;
         setConnected(false);
         setDevices([]);
@@ -46,6 +65,7 @@ export function useRemoteSession() {
 
     return () => {
       mounted = false;
+      stopPing();
       if (ws.current) {
         ws.current.onclose = null;
         ws.current.close();
@@ -74,12 +94,10 @@ export function useRemoteSession() {
         break;
 
       case 'device.events':
-        // Historical events dump on session start
         setEvents(data.payload.events);
         break;
 
       default:
-        // Live event from active device
         if (data.deviceId) {
           setEvents(prev => {
             const next = [...prev, data];

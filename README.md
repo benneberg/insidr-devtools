@@ -1,272 +1,308 @@
-# Custom DevTools - Production-Ready Browser Debugging
+# insidr
 
-**A comprehensive, production-ready debugging tool optimized for digital signage, kiosk applications, and web applications.**
+**Remote observability for digital signage and kiosk applications.**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![React](https://img.shields.io/badge/react-19.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.10+-blue)
+![React](https://img.shields.io/badge/react-18-blue)
+
+insidr is a platform-independent remote debugging agent for web-based signage players. It streams console logs, network requests, errors, and performance telemetry from any Chromium-based device to a web dashboard — no ADB, no SDB, no developer mode, no same-network requirement.
+
+> We are not building a debugger. We are building observability for an industry that never had it.
 
 ---
 
-## Features at a Glance
+## The Problem
 
-### 10 Comprehensive Tabs
+Debugging a signage player traditionally means:
+- Enabling developer mode differently on every platform (LG WebOS, Samsung Tizen, BrightSign, Android, etc.)
+- Being physically present or on the same network
+- Using ADB or SDB which are vendor-specific and fragile
+- Losing all logs the moment the browser crashes
 
-1. **Console** - Real-time log capture & JavaScript execution
-2. **Elements** - DOM tree inspector with live highlighting
-3. **Network** - Request/response monitoring
-4. **Sources** - File tree viewer for all assets
-5. **Storage** - localStorage, sessionStorage, cookies, IndexedDB
-6. **Application** - Service workers & cache management
-7. **Monitor** - FPS, memory, performance metrics
-8. **System Info** 🆕 - Complete device diagnostics
-9. **Quick Actions** 🆕 - Emergency controls & auto-refresh
-10. **Script Runner** - Custom JavaScript executor
-
-### Signage-Specific Features 
-
-- ⏱️ **Uptime Tracking**: Monitor display runtime
-- 🔄 **Auto-Refresh**: Prevent memory leaks (scheduled + threshold-based)
-- 📱 **Remote Access**: QR code for mobile debugging
-- 🚨 **Emergency Controls**: Clear everything, stop media, force GC
-- 📊 **System Diagnostics**: GPU, memory, network, orientation
-- 📥 **Export Debug Report**: Comprehensive JSON report
-- 🔍 **Resource Checker**: Find missing/failed assets
-- 🖥️ **Display Info**: Resolution, orientation, fullscreen status
+insidr solves all of this with a single `<script>` tag.
 
 ---
 
-##  Design Philosophy
+## How It Works
 
-### Neo-Brutalism Aesthetic
+```
+[Signage Device]                    [Your Laptop / Server]
+ HTML app + insidr agent  ──WS──►   debug_server.py
+  captures everything                stores all events
+  console, network, errors                ↕
+  performance, device info          insidr dashboard
+                                    (React web UI)
+```
 
-- **White background** with **black borders** (2-4px)
-- **Neon green (#00FF66)** accents for active states
-- **Hard shadows** (no blur): `box-shadow: 4px 4px 0 #000`
-- **Bold typography**: Space Grotesk for UI, Courier New for code
-- **Micro-interactions**: Buttons shift on hover, green pulse for active
+The agent runs inside your app and pushes structured events to the server over WebSocket. The server stores every event in SQLite. You open the dashboard in any browser and see everything in real time — or review the full history after a crash.
+
+---
+
+## Key Features
+
+**Remote debugging without native tooling**
+No ADB, SDB, Chrome DevTools Protocol, or developer mode required. Works on any device that runs a Chromium-based browser.
+
+**Crash log persistence**
+Every event is written to SQLite the moment it arrives. If the device browser crashes at 3am, the full event history — including the error that caused the crash — is still there when you open the dashboard in the morning. This is the "Heisenbug" feature: bugs that are caused by the act of observing them are no longer invisible.
+
+**Remote script execution**
+Run arbitrary JavaScript on the device from the dashboard. Useful for inspecting live state, manipulating the DOM, or injecting debug helpers.
+
+**Soft breakpoints**
+Inject `window.__insidrBreakpoint(label, data)` via remote script execution. Call it from your app to stream named state snapshots to the dashboard — similar to a breakpoint, but non-blocking and production-safe.
+
+**Variable watchpoints**
+Inject a watcher via `Object.defineProperty` to stream a notification every time a variable changes value.
+
+**Platform independent**
+Works on LG WebOS, Samsung Tizen, BrightSign, Android, Raspberry Pi, and any other platform running Chromium — including standard desktop browsers for development.
 
 ---
 
 ## Quick Start
 
-### React Integration
+### 1. Start the backend
 
-```jsx
-import DevTools from './components/DevTools';
-
-function App() {
-  return (
-    <div>
-      <YourApp />
-      {/* Add DevTools */}
-      <DevTools />
-    </div>
-  );
-}
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate      # Windows
+# source venv/bin/activate  # Mac/Linux
+pip install -r requirements.txt
+python debug_server.py
 ```
 
-### Toggle Button
+You'll see:
+```
+Device WebSocket:     ws://0.0.0.0:9229
+Subscriber WebSocket: ws://0.0.0.0:9230
+HTTP API:             http://0.0.0.0:9231
+Event persistence enabled: insidr_events.db
+```
 
-- Fixed at **bottom-right** corner
-- Click to slide DevTools **up/down**
-- **Green pulsing indicator** when active
-- **Resizable** panel (drag top edge)
+### 2. Start the dashboard
+
+```bash
+cd frontend
+yarn install
+yarn start
+```
+
+Open `http://localhost:3000` — you'll see the device list (empty for now).
+
+### 3. Add the agent to your app
+
+Add this as the **first script** in your signage app's `<head>`. Change the IP to your server's address.
+
+```html
+<script>
+(function(config) {
+  var SERVER_URL = config.serverUrl;
+  var DEVICE_ID = (function() {
+    try {
+      var id = localStorage.getItem('__insidr_device_id');
+      if (!id) { id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2,8); localStorage.setItem('__insidr_device_id', id); }
+      return id;
+    } catch(e) { return 'device_' + Date.now(); }
+  })();
+
+  var ws, queue = [], connected = false, SESSION_ID = 'sess_' + Date.now();
+
+  function emit(type, payload) {
+    var e = { type: type, payload: payload, timestamp: Date.now(), sessionId: SESSION_ID, deviceId: DEVICE_ID };
+    connected && ws && ws.readyState === 1 ? ws.send(JSON.stringify(e)) : queue.length < 200 && queue.push(e);
+  }
+
+  function connect() {
+    try { ws = new WebSocket(SERVER_URL); } catch(e) { setTimeout(connect, 3000); return; }
+    ws.onopen = function() {
+      connected = true;
+      ws.send(JSON.stringify({ type: '_auth', payload: { deviceId: DEVICE_ID, userAgent: navigator.userAgent, url: window.location.href } }));
+      while(queue.length) ws.send(JSON.stringify(queue.shift()));
+    };
+    ws.onmessage = function(m) {
+      try { var d = JSON.parse(m.data); if(d.type==='command') handleCommand(d.command, d.payload); } catch(e) {}
+    };
+    ws.onclose = function() { connected = false; setTimeout(connect, 3000); };
+    ws.onerror = function() {};
+  }
+
+  function handleCommand(cmd, payload) {
+    if(cmd==='agent.reload') window.location.reload();
+    if(cmd==='script.execute' && payload && payload.code) {
+      try { var r = eval(payload.code); emit('script.result', { success:true, result:String(r) }); }
+      catch(e) { emit('script.result', { success:false, error:e.message }); }
+    }
+  }
+
+  // Console
+  ['log','warn','error','info','debug'].forEach(function(l) {
+    var o = console[l]; console[l] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      emit('console', { level:l, args:args.map(function(a){ return typeof a==='object'?JSON.stringify(a):String(a); }) });
+      o.apply(console, arguments);
+    };
+  });
+
+  // Errors
+  window.addEventListener('error', function(e) { emit('error', { message:e.message, filename:e.filename, lineno:e.lineno, colno:e.colno }); });
+  window.addEventListener('unhandledrejection', function(e) { emit('error.unhandled_rejection', { reason:String(e.reason) }); });
+
+  // Network
+  if(window.fetch) { var of=window.fetch; window.fetch=function() { var a=arguments,id='req_'+Date.now(),url=typeof a[0]==='string'?a[0]:(a[0]&&a[0].url)||'',m=(a[1]&&a[1].method)||'GET',t=performance.now(); emit('network.request',{requestId:id,url:url,method:m}); return of.apply(window,a).then(function(r){var c=r.clone();c.text().then(function(b){emit('network.response',{requestId:id,status:r.status,duration:Math.round(performance.now()-t),body:b.substr(0,4000)});});return r;}).catch(function(e){emit('network.error',{requestId:id,error:e.message});throw e;}); }; }
+
+  // Device info
+  emit('device.info', { userAgent:navigator.userAgent, platform:navigator.platform, screenResolution:screen.width+'x'+screen.height, viewport:window.innerWidth+'x'+window.innerHeight, language:navigator.language });
+
+  connect();
+
+})({ serverUrl: 'ws://192.168.1.x:9229' });  // ← replace with your server IP
+</script>
+```
+
+The device will appear in the dashboard within seconds.
 
 ---
 
-## 🛠️ Tab Details
+## Dashboard
 
-### 1. Console Tab
-- Capture: `console.log`, `warn`, `error`, `info`
-- Execute JavaScript commands
-- Command history (↑/↓ keys)
-- Filter by log type
-- Export to JSON/CSV
+### Device list
+Shows all devices that have ever connected (including historical devices with stored event logs). Click any device to open its session.
 
-### 2. Elements Tab
-- Interactive DOM tree
-- Expand/collapse nodes
-- **Hover to highlight** elements on page
-- View computed styles
-- Element attributes
-- Scroll to element
+### Session view
+- **All / Console / Network / Errors / Performance** tabs filter the live event stream
+- Click any event to expand the full payload
+- Events are shown newest-first
 
-### 3. Network Tab
-- Intercept `fetch` and `XMLHttpRequest`
-- Request/response headers & body
-- Duration & size tracking
-- Status color coding
-- Export to JSON/CSV
+### Script Runner
+A collapsible panel at the bottom of every session. Write JavaScript and run it on the device with Ctrl+Enter. Built-in snippets include:
 
-### 4. Sources Tab
-- List scripts, stylesheets, images
-- View source code
-- Filter by type
-- Inline vs external detection
+| Snippet | What it does |
+|---------|-------------|
+| Video status | Reads `readyState`, `networkState`, `error` from the first `<video>` |
+| All videos | Lists all video elements and their state |
+| Memory | Reports JS heap usage |
+| localStorage | Dumps all localStorage keys and values |
+| Install breakpt | Injects `window.__insidrBreakpoint(label, data)` into the running app |
+| Watch variable | Installs an `Object.defineProperty` watcher that streams change notifications |
+| Outline elements | Adds a red outline to every DOM element (useful for layout debugging) |
+| Clear outlines | Removes outlines |
 
-### 5. Storage Tab
-- **localStorage**: View, edit, delete
-- **sessionStorage**: Full management
-- **Cookies**: View & delete
-- **IndexedDB**: List databases
-- Export to JSON/CSV
-
-### 6. Application Tab
-- Service workers (state, scope, script URL)
-- Cache storage (list, clear)
-- App manifest viewer
-- Unregister workers
-
-### 7. Monitor Tab
-- **FPS**: Real-time with 30s chart
-- **Memory**: JS heap usage with chart
-- **Performance**: Load time, DOM ready
-- **Resources**: All loaded assets
-- **System Info**: CPU, memory, connection
-
-### 8. System Info Tab 🆕
-- **Status Cards**: Connection, uptime, memory, resolution
-- **Device Info**: Platform, CPU, memory, language
-- **Display**: Resolution, orientation, pixel ratio, touch
-- **Graphics**: GPU vendor/renderer, hardware acceleration
-- **Network**: Connection type, speed, RTT, ping
-- **Storage**: Used/quota/percentage
-- **Quick Actions**: Fullscreen, orientation, copy info, reload
-
-### 9. Quick Actions Panel 🆕
-- **⚠️ Clear Everything**: Storage + caches + reload
-- **⏸ Stop All Media**: Pause/reset all video/audio
-- **🗑️ Force GC**: Trigger garbage collection
-- **🔄 Reset Videos**: Reload video elements
-- **📥 Export Report**: Download debug report
-- **📱 QR Code**: Remote access
-- **🔍 Check Resources**: Find missing assets
-- **📸 Screenshot**: Capture view
-- **Auto-Refresh**: Schedule + memory threshold
-
-### 10. Script Runner Tab
-- Code editor with monospace font
-- Execute custom JavaScript
-- Save/load scripts
-- Example scripts library
-- Export output to JSON/CSV
+### Remote commands
+- **Enable / Disable** — toggles event collection without reloading
+- **Reload** — triggers `window.location.reload()` on the device
 
 ---
 
-## 📊 Use Cases
+## Event Persistence (Heisenbug Feature)
 
-### Digital Signage
-```
-✓ 24/7 monitoring
-✓ Auto-refresh every X hours
-✓ Remote debugging via QR code
-✓ Emergency controls for stuck displays
-✓ Uptime tracking
-✓ Memory leak detection
-```
+All events are written to `insidr_events.db` (SQLite) in the backend directory the moment they arrive. This means:
 
-### Kiosk Applications
-```
-✓ Public-facing terminal debugging
-✓ Resource usage monitoring
-✓ Quick actions for recovery
-✓ Export debug reports
-✓ Fullscreen management
+- A device that crashes at 3am has its full event history available in the morning
+- The last error before `agent.shutdown` is preserved
+- Device history survives server restarts
+- Historical devices appear in the device list with a `historical` flag
+
+To disable persistence and use memory-only mode:
+```bash
+python debug_server.py --no-db
 ```
 
-### Web Development
-```
-✓ Full console functionality
-✓ Network inspection
-✓ DOM manipulation
-✓ Performance profiling
-✓ Storage management
-```
-
----
-
-## ⚡ Performance
-
-| State | Memory | CPU |
-|-------|--------|-----|
-| Closed | 2-5 MB | <0.1% |
-| Open | 10-20 MB | 1-2% |
-| FPS Tracking | +2 MB | +0.5% |
-
-**Network Overhead**: <1ms per request
-
----
-
-## 🔒 Security
-
-### Production Guidelines
-
-```javascript
-// ✅ Only enable for admins
-if (user.role === 'admin' || isDevelopment) {
-  <DevTools />
-}
-
-// ❌ Never expose publicly
-// ❌ Don't log sensitive data
-// ❌ Don't execute untrusted scripts
+To use a custom database path:
+```bash
+python debug_server.py --db-path /var/log/insidr/events.db
 ```
 
 ---
 
-## 🌐 Browser Support
+## Architecture
 
-| Browser | Version | Features |
-|---------|---------|----------|
-| Chrome | 90+ | ✅ Full (incl. memory API) |
-| Edge | 90+ | ✅ Full |
-| Firefox | 88+ | ✅ (no memory API) |
-| Safari | 14+ | ⚠️ Limited IndexedDB |
+```
+frontend/
+  src/
+    App.js                  # Remote dashboard UI
+    hooks/
+      useRemoteSession.js   # WebSocket connection to server port 9230
+    insidr/
+      agent.js              # Embedded agent (used in local/embedded mode)
+      transports/
+        websocket.js        # WebSocket transport sink
+        localStorage.js     # Local storage sink
 
----
+backend/
+  debug_server.py           # WebSocket relay + SQLite event store
+  requirements.txt
+```
 
-## 📝 Documentation
-
-- **[OPEN_SPEC.md](./OPEN_SPEC.md)** - Complete technical specification
-- **[DEVTOOLS_INTEGRATION.md](./DEVTOOLS_INTEGRATION.md)** - Integration guide
-
----
-
-## 🗺️ Roadmap
-
-### v1.1 (Q1 2025)
-- [ ] Standalone script tag bundle
-- [ ] NPM package
-- [ ] Remote console (WebSocket)
-- [ ] Dark mode
-
-### v2.0 (Q3 2025)
-- [ ] AI debugging assistant
-- [ ] Performance profiler
-- [ ] Network throttling
-- [ ] Device emulation
+**Ports:**
+- `9229` — devices connect here (WebSocket)
+- `9230` — dashboard connects here (WebSocket subscriber)
+- `9231` — HTTP REST API (`/api/devices`, `/api/device/:id/events`)
 
 ---
 
-## 📄 License
+## What You Can and Can't Debug Remotely
+
+| Capability | insidr | Native DevTools |
+|-----------|--------|----------------|
+| Console logs (all levels) | ✅ | ✅ |
+| Network requests + responses | ✅ | ✅ |
+| JavaScript errors + stack traces | ✅ | ✅ |
+| Performance metrics + memory | ✅ | ✅ |
+| Device info + screen resolution | ✅ | ✅ |
+| Remote script execution | ✅ | ✅ |
+| Crash log persistence | ✅ | ❌ |
+| Works without developer mode | ✅ | ❌ |
+| Platform independent | ✅ | ❌ |
+| Pause execution / breakpoints | ❌ | ✅ |
+| Step through code | ❌ | ✅ |
+| Edit live source files | ❌ | ✅ |
+
+---
+
+## Supported Platforms
+
+Any device running a Chromium-based browser, including:
+
+- LG WebOS (signageOS)
+- Samsung Tizen (signageOS)
+- BrightSign
+- Android (Chrome, WebView)
+- Raspberry Pi (Chromium)
+- Windows / Mac / Linux (all browsers for development)
+
+---
+
+## Browser Compatibility
+
+| Browser | Console | Network | Errors | Memory API |
+|---------|---------|---------|--------|------------|
+| Chrome 90+ | ✅ | ✅ | ✅ | ✅ |
+| Edge 90+ | ✅ | ✅ | ✅ | ✅ |
+| Firefox 88+ | ✅ | ✅ | ✅ | ❌ |
+| Safari 14+ | ✅ | ✅ | ✅ | ❌ |
+| LG WebOS (Chromium) | ✅ | ✅ | ✅ | ❌ |
+
+---
+
+## Roadmap
+
+- [ ] Persist device info to SQLite (currently reconstructed from events)
+- [ ] Export full session as JSON from dashboard
+- [ ] Auth token support for multi-team deployments
+- [ ] Docker image for easy server deployment
+- [ ] Cloud-hosted relay option (for debugging devices not on local network)
+- [ ] signageOS SDK integration
+
+---
+
+## License
 
 MIT License
 
 ---
 
-## 🌟 Key Highlights
-
-✅ **10 tabs** with comprehensive debugging tools  
-✅ **Signage-optimized** with auto-refresh & remote access  
-✅ **Export everything** to JSON/CSV  
-✅ **Neo-brutalism design** - clean, modern, visible  
-✅ **Production-ready** with security best practices  
-✅ **No mock data** - fully functional  
-✅ **Open source** - MIT License  
-
----
-
-**Built for digital signage, kiosks, and production debugging**
-
-**Version 1.0.0 | December 2024**
+**insidr** — built by a signage developer, for signage developers.
