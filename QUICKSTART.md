@@ -133,3 +133,10 @@ $env:PORT=3001; npm start
 - ✅ Read [SETUP.md](../SETUP.md) for detailed setup
 - ✅ Read [DEVTOOLS_INTEGRATION.md](../DEVTOOLS_INTEGRATION.md) for integration options
 - ✅ Check [README.md](../README.md) for features documentation
+
+
+## If port 3000, or any other port is in use:
+# Find what's using port 3000
+netstat -ano | findstr :3000
+# Then kill it by PID
+taskkill /PID <pid> /F

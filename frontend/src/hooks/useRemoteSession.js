@@ -10,24 +10,31 @@ export function useRemoteSession() {
   const ws = useRef(null);
 
   useEffect(() => {
+    let mounted = true;
+
     function connect() {
+      if (!mounted) return;
+      
       ws.current = new WebSocket(WS_URL);
 
       ws.current.onopen = () => {
+        if (!mounted) { ws.current.close(); return; }
         setConnected(true);
       };
 
       ws.current.onclose = () => {
+        if (!mounted) return;
         setConnected(false);
         setDevices([]);
         setTimeout(connect, 3000);
       };
 
       ws.current.onerror = () => {
-        ws.current.close();
+        if (ws.current) ws.current.close();
       };
 
       ws.current.onmessage = (msg) => {
+        if (!mounted) return;
         try {
           const data = JSON.parse(msg.data);
           handleMessage(data);
@@ -36,9 +43,11 @@ export function useRemoteSession() {
     }
 
     connect();
+
     return () => {
+      mounted = false;
       if (ws.current) {
-        ws.current.onclose = null; // prevent reconnect on unmount
+        ws.current.onclose = null;
         ws.current.close();
       }
     };
