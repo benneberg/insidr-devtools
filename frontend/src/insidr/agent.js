@@ -415,9 +415,31 @@ class ErrorInstrumentation {
     };
 
     window.addEventListener('error', errorHandler);
-    window.addEventListener('unhandledrejection', unhandledRejectionHandler);
+    const mediaErrorHandler = (e) => {
+      const el = e.target;
 
-    this.handlers = [errorHandler, unhandledRejectionHandler];
+      if (!el || !el.tagName) return;
+
+      if (el.tagName === 'VIDEO' || el.tagName === 'AUDIO') {
+        this.eventBus.emit({
+          type: 'media.error',
+          payload: {
+            tag: el.tagName,
+            src: el.currentSrc || el.src,
+            networkState: el.networkState,
+            readyState: el.readyState,
+            error: el.error ? {
+              code: el.error.code,
+              message: el.error.message
+            } : null
+          }
+        });
+      }
+    };
+
+    document.addEventListener("error", mediaErrorHandler, true);    
+    window.addEventListener('unhandledrejection', unhandledRejectionHandler);
+    this.handlers = [errorHandler, unhandledRejectionHandler, mediaErrorHandler];
     this.isActive = true;
   }
 
@@ -426,6 +448,7 @@ class ErrorInstrumentation {
 
     window.removeEventListener('error', this.handlers[0]);
     window.removeEventListener('unhandledrejection', this.handlers[1]);
+    document.removeEventListener('error', this.handlers[2], true);
 
     this.isActive = false;
   }
@@ -444,12 +467,19 @@ class PerformanceInstrumentation {
 
     // Emit performance metrics periodically
     const metricsInterval = setInterval(() => {
+
+      if (performance.memory) {
+        this.eventBus.emit({
+          type: 'performance.memory',
+          payload: {
+            usedJSHeapSize: performance.memory.usedJSHeapSize,
+            totalJSHeapSize: performance.memory.totalJSHeapSize,
+            jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+          }
+        });
+      }
+
       const metrics = {
-        memory: performance.memory ? {
-          usedJSHeapSize: performance.memory.usedJSHeapSize,
-          totalJSHeapSize: performance.memory.totalJSHeapSize,
-          jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
-        } : null,
         timing: performance.timing ? {
           loadTime: performance.timing.loadEventEnd - performance.timing.navigationStart,
           domReady: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart
@@ -460,6 +490,7 @@ class PerformanceInstrumentation {
         type: 'performance.metrics',
         payload: metrics
       });
+
     }, 5000);
 
     this.intervals.push(metricsInterval);

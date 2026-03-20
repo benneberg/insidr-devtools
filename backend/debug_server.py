@@ -187,7 +187,7 @@ class DebugServer:
         if self.device_info:
             logger.info(f"Restored {len(self.device_info)} device(s) from event history")
 
-    async def handle_device(self, websocket, path):
+    async def handle_device(self, websocket):
         device_id = None
         try:
             logger.info(f"Device connected from {websocket.remote_address}")
@@ -196,7 +196,15 @@ class DebugServer:
                     event = json.loads(message)
 
                     if event.get('type') == '_auth':
+                        event['type'] = 'agent.started'
                         device_id = event['payload']['deviceId']
+                        old = self.devices.get(device_id)
+                        if old:
+                            try:
+                                await old.close()
+                            except:
+                                pass
+
                         self.devices[device_id] = websocket
                         self.device_info[device_id] = {
                             'deviceId': device_id,
@@ -238,7 +246,7 @@ class DebugServer:
                     'payload': {'deviceId': device_id}
                 })
 
-    async def handle_subscriber(self, websocket, path):
+    async def handle_subscriber(self, websocket):
         logger.info(f"Subscriber connected from {websocket.remote_address}")
         self.subscribers.add(websocket)
         try:
@@ -287,15 +295,19 @@ class DebugServer:
     async def broadcast_to_subscribers(self, event):
         if not self.subscribers:
             return
-        message = json.dumps(event)
-        disconnected = set()
-        for subscriber in self.subscribers:
-            try:
-                await subscriber.send(message)
-            except websockets.exceptions.ConnectionClosed:
-                disconnected.add(subscriber)
-        self.subscribers -= disconnected
 
+        message = json.dumps(event)
+
+        await asyncio.gather(*[
+            self._safe_send(sub, message)
+            for sub in list(self.subscribers)
+        ])
+    async def _safe_send(self, ws, message):
+        try:
+            await ws.send(message)
+        except websockets.exceptions.ConnectionClosed:
+            self.subscribers.discard(ws)
+            
     async def http_handler(self, request):
         if request.path == '/api/devices':
             return web.json_response(list(self.device_info.values()))

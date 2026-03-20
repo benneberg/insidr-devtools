@@ -44,7 +44,6 @@ export function useRemoteSession() {
         stopPing();
         if (!mounted) return;
         setConnected(false);
-        setDevices([]);
         setTimeout(connect, 3000);
       };
 
@@ -79,12 +78,18 @@ export function useRemoteSession() {
         setDevices(data.payload);
         break;
 
-      case 'device.connected':
-        setDevices(prev => {
-          const exists = prev.find(d => d.deviceId === data.payload.deviceId);
-          return exists ? prev : [...prev, data.payload];
-        });
-        break;
+    case 'device.connected':
+      setDevices(prev => {
+        const exists = prev.find(d => d.deviceId === data.payload.deviceId);
+        const next = exists ? prev : [...prev, data.payload];
+
+        if (activeDevice?.deviceId === data.payload.deviceId) {
+          selectDevice(data.payload);
+        }
+
+        return next;
+      });
+      break;
 
       case 'device.disconnected':
         setDevices(prev => prev.filter(d => d.deviceId !== data.payload.deviceId));
