@@ -1,15 +1,10 @@
 # insidr
 
-**Remote observability for digital signage and kiosk applications.**
-
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Python](https://img.shields.io/badge/python-3.10+-blue)
-![React](https://img.shields.io/badge/react-18-blue)
-
-insidr is a platform-independent remote debugging agent for web-based signage players. It streams console logs, network requests, errors, and performance telemetry from any Chromium-based device to a web dashboard — no ADB, no SDB, no developer mode, no same-network requirement.
+**Remote observability and debugging for digital signage and kiosk applications.**
 
 > We are not building a debugger. We are building observability for an industry that never had it.
+
+insidr is a platform-independent remote debugging agent for web-based signage players. It streams console logs, network requests, errors, performance telemetry, and device lifecycle events from any Chromium-based device to a web dashboard — no ADB, no SDB, no developer mode, no same-network requirement.
 
 ---
 
@@ -19,46 +14,24 @@ Debugging a signage player traditionally means:
 - Enabling developer mode differently on every platform (LG WebOS, Samsung Tizen, BrightSign, Android, etc.)
 - Being physically present or on the same network
 - Using ADB or SDB which are vendor-specific and fragile
-- Losing all logs the moment the browser crashes
+- Losing all logs the moment the browser crashes or the screen turns off
 
-insidr solves all of this with a single `<script>` tag.
+insidr solves all of this with a single `<script>` tag injected into your app.
 
 ---
 
 ## How It Works
 
 ```
-[Signage Device]                    [Your Laptop / Server]
- HTML app + insidr agent  ──WS──►   debug_server.py
-  captures everything                stores all events
-  console, network, errors                ↕
-  performance, device info          insidr dashboard
-                                    (React web UI)
+[Signage Device]                         [Your Laptop / Server]
+ HTML app + insidr agent  ──WSS──►        debug_server.py
+  captures everything                      stores all events in SQLite
+  console, network, errors                       ↕
+  performance, lifecycle                   insidr dashboard
+  device info, battery                     (React web UI — any browser)
 ```
 
-The agent runs inside your app and pushes structured events to the server over WebSocket. The server stores every event in SQLite. You open the dashboard in any browser and see everything in real time — or review the full history after a crash.
-
----
-
-## Key Features
-
-**Remote debugging without native tooling**
-No ADB, SDB, Chrome DevTools Protocol, or developer mode required. Works on any device that runs a Chromium-based browser.
-
-**Crash log persistence**
-Every event is written to SQLite the moment it arrives. If the device browser crashes at 3am, the full event history — including the error that caused the crash — is still there when you open the dashboard in the morning. This is the "Heisenbug" feature: bugs that are caused by the act of observing them are no longer invisible.
-
-**Remote script execution**
-Run arbitrary JavaScript on the device from the dashboard. Useful for inspecting live state, manipulating the DOM, or injecting debug helpers.
-
-**Soft breakpoints**
-Inject `window.__insidrBreakpoint(label, data)` via remote script execution. Call it from your app to stream named state snapshots to the dashboard — similar to a breakpoint, but non-blocking and production-safe.
-
-**Variable watchpoints**
-Inject a watcher via `Object.defineProperty` to stream a notification every time a variable changes value.
-
-**Platform independent**
-Works on LG WebOS, Samsung Tizen, BrightSign, Android, Raspberry Pi, and any other platform running Chromium — including standard desktop browsers for development.
+The agent runs inside your app and pushes structured events to the server over WebSocket. The server stores every event in SQLite immediately on arrival. The dashboard connects to the server and shows everything in real time — or the full history after a crash.
 
 ---
 
@@ -69,19 +42,24 @@ Works on LG WebOS, Samsung Tizen, BrightSign, Android, Raspberry Pi, and any oth
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate      # Windows
-# source venv/bin/activate  # Mac/Linux
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Mac/Linux
 pip install -r requirements.txt
-python debug_server.py
+
+# Local dev — no auth required
+python debug_server.py --no-auth
 ```
 
 You'll see:
 ```
+Auth DISABLED (--no-auth). Do not use on shared networks.
 Device WebSocket:     ws://0.0.0.0:9229
 Subscriber WebSocket: ws://0.0.0.0:9230
 HTTP API:             http://0.0.0.0:9231
-Event persistence enabled: insidr_events.db
+Event persistence:    insidr_events.db
 ```
+
+For production or shared networks, omit `--no-auth`. The server will print an enrollment token that devices must present to connect.
 
 ### 2. Start the dashboard
 
@@ -91,129 +69,122 @@ yarn install
 yarn start
 ```
 
-Open `http://localhost:3000` — you'll see the device list (empty for now).
+Open `http://localhost:3000`. You'll see the device list (empty for now).
 
 ### 3. Add the agent to your app
 
-Add this as the **first script** in your signage app's `<head>`. Change the IP to your server's address.
+Add this as the **first script** in your signage app's `<head>`. Point `url` at your machine's IP.
 
 ```html
+<script src="path/to/insidr/transports/websocket.js"></script>
+<script src="path/to/insidr/agent.js"></script>
 <script>
-(function(config) {
-  var SERVER_URL = config.serverUrl;
-  var DEVICE_ID = (function() {
-    try {
-      var id = localStorage.getItem('__insidr_device_id');
-      if (!id) { id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2,8); localStorage.setItem('__insidr_device_id', id); }
-      return id;
-    } catch(e) { return 'device_' + Date.now(); }
-  })();
-
-  var ws, queue = [], connected = false, SESSION_ID = 'sess_' + Date.now();
-
-  function emit(type, payload) {
-    var e = { type: type, payload: payload, timestamp: Date.now(), sessionId: SESSION_ID, deviceId: DEVICE_ID };
-    connected && ws && ws.readyState === 1 ? ws.send(JSON.stringify(e)) : queue.length < 200 && queue.push(e);
-  }
-
-  function connect() {
-    try { ws = new WebSocket(SERVER_URL); } catch(e) { setTimeout(connect, 3000); return; }
-    ws.onopen = function() {
-      connected = true;
-      ws.send(JSON.stringify({ type: '_auth', payload: { deviceId: DEVICE_ID, userAgent: navigator.userAgent, url: window.location.href } }));
-      while(queue.length) ws.send(JSON.stringify(queue.shift()));
-    };
-    ws.onmessage = function(m) {
-      try { var d = JSON.parse(m.data); if(d.type==='command') handleCommand(d.command, d.payload); } catch(e) {}
-    };
-    ws.onclose = function() { connected = false; setTimeout(connect, 3000); };
-    ws.onerror = function() {};
-  }
-
-  function handleCommand(cmd, payload) {
-    if(cmd==='agent.reload') window.location.reload();
-    if(cmd==='script.execute' && payload && payload.code) {
-      try { var r = eval(payload.code); emit('script.result', { success:true, result:String(r) }); }
-      catch(e) { emit('script.result', { success:false, error:e.message }); }
-    }
-  }
-
-  // Console
-  ['log','warn','error','info','debug'].forEach(function(l) {
-    var o = console[l]; console[l] = function() {
-      var args = Array.prototype.slice.call(arguments);
-      emit('console', { level:l, args:args.map(function(a){ return typeof a==='object'?JSON.stringify(a):String(a); }) });
-      o.apply(console, arguments);
-    };
-  });
-
-  // Errors
-  window.addEventListener('error', function(e) { emit('error', { message:e.message, filename:e.filename, lineno:e.lineno, colno:e.colno }); });
-  window.addEventListener('unhandledrejection', function(e) { emit('error.unhandled_rejection', { reason:String(e.reason) }); });
-
-  // Network
-  if(window.fetch) { var of=window.fetch; window.fetch=function() { var a=arguments,id='req_'+Date.now(),url=typeof a[0]==='string'?a[0]:(a[0]&&a[0].url)||'',m=(a[1]&&a[1].method)||'GET',t=performance.now(); emit('network.request',{requestId:id,url:url,method:m}); return of.apply(window,a).then(function(r){var c=r.clone();c.text().then(function(b){emit('network.response',{requestId:id,status:r.status,duration:Math.round(performance.now()-t),body:b.substr(0,4000)});});return r;}).catch(function(e){emit('network.error',{requestId:id,error:e.message});throw e;}); }; }
-
-  // Device info
-  emit('device.info', { userAgent:navigator.userAgent, platform:navigator.platform, screenResolution:screen.width+'x'+screen.height, viewport:window.innerWidth+'x'+window.innerHeight, language:navigator.language });
-
-  connect();
-
-})({ serverUrl: 'ws://192.168.1.x:9229' });  // ← replace with your server IP
+  insidr.init(new WebSocketSink({
+    url: 'ws://YOUR_SERVER_IP:9229',
+    // enrollmentToken: 'your-token'  // required when not using --no-auth
+  }));
 </script>
 ```
 
-The device will appear in the dashboard within seconds.
+The device appears in the dashboard within seconds of connecting.
 
 ---
 
-## Dashboard
+## Features
 
-### Device list
-Shows all devices that have ever connected (including historical devices with stored event logs). Click any device to open its session.
+### Dashboard tabs (per device)
 
-### Session view
-- **All / Console / Network / Errors / Performance** tabs filter the live event stream
-- Click any event to expand the full payload
-- Events are shown newest-first
+| Tab | What you see |
+|-----|-------------|
+| **Console** | All `console.log/warn/error/info/debug` output. Inline eval bar to run JS on the device. ↑↓ command history. |
+| **Network** | Every `fetch` and `XHR` request reconstructed with request/response headers, body, status, duration. Filter by fetch / xhr / failed. |
+| **Errors** | JS errors, unhandled rejections, and media element errors with full stack traces. |
+| **Monitor** | FPS chart, JS heap chart, page load timing. Metrics arrive every 5 seconds from the agent. |
+| **Storage** | Fetch localStorage / sessionStorage / cookies from the device on demand. Delete keys or clear all. |
+| **Application** | Check service workers, cache storage, app manifest. Clear caches or unregister SWs remotely. |
+| **System Info** | Auto-populated from `device.info` event. Fetch full GPU, memory, connection, orientation info on demand. |
+| **Quick Actions** | Clear Everything, Stop Media, Reset Videos, Force GC, Check Resources, Toggle Fullscreen, Auto-Refresh scheduler, debug report export. |
+| **Script Runner** | 9 built-in snippets (video status, memory, localStorage, breakpoint installer, variable watcher, etc). Save/load custom scripts. |
+| **Blackbox** | Every event received, searchable and filterable by type. Crash forensics view. |
 
-### Script Runner
-A collapsible panel at the bottom of every session. Write JavaScript and run it on the device with Ctrl+Enter. Built-in snippets include:
+### Agent capabilities
 
-| Snippet | What it does |
-|---------|-------------|
-| Video status | Reads `readyState`, `networkState`, `error` from the first `<video>` |
-| All videos | Lists all video elements and their state |
-| Memory | Reports JS heap usage |
-| localStorage | Dumps all localStorage keys and values |
-| Install breakpt | Injects `window.__insidrBreakpoint(label, data)` into the running app |
-| Watch variable | Installs an `Object.defineProperty` watcher that streams change notifications |
-| Outline elements | Adds a red outline to every DOM element (useful for layout debugging) |
-| Clear outlines | Removes outlines |
+- Console capture — all levels, with stack traces
+- Network interception — fetch, XHR, and `navigator.sendBeacon`
+- Error capture — JS errors, unhandled promise rejections, media element errors
+- Performance metrics — FPS via rAF, JS heap via `performance.memory`, page load timing
+- Page lifecycle — `visibilitychange`, `pagehide`, `pageshow`, `freeze`, `resume`
+- Device info — userAgent, platform, screen resolution, viewport, CPU cores, device memory
+- Battery status — level and charging state via Battery API (where available)
+- Degradation modes — OFFLINE (buffer only, FPS stopped), LOW_POWER (metrics throttled to 30s), MAINTENANCE
+- IndexedDB buffer — 50MB circular buffer survives page reloads and browser crashes
+- Event batching — 50 events or 5 seconds, whichever comes first
+- PII redaction — Authorization, Cookie, Set-Cookie, x-api-key headers stripped automatically
+- Rate limiting — per-category caps; errors are never dropped
+- Durable device identity — survives `localStorage.clear()` via fallback chain
+- Replay on reconnect — last 500 buffered events replayed after server restart
 
-### Remote commands
-- **Enable / Disable** — toggles event collection without reloading
-- **Reload** — triggers `window.location.reload()` on the device
+### Server capabilities
+
+- SQLite persistence — every event written on arrival; history survives server restarts
+- Historical devices — offline devices still appear in the list with full event history
+- Watchdog — marks devices as suspect if silent for 90 seconds
+- Enrollment token auth — timing-safe comparison, auto-generated and persisted on first run
+- Gap detection via sequence numbers
 
 ---
 
-## Event Persistence (Heisenbug Feature)
+## Authentication
 
-All events are written to `insidr_events.db` (SQLite) in the backend directory the moment they arrive. This means:
+### Local development
 
-- A device that crashes at 3am has its full event history available in the morning
-- The last error before `agent.shutdown` is preserved
-- Device history survives server restarts
-- Historical devices appear in the device list with a `historical` flag
-
-To disable persistence and use memory-only mode:
 ```bash
-python debug_server.py --no-db
+python debug_server.py --no-auth
 ```
 
-To use a custom database path:
+Leave `REACT_APP_WS_TOKEN` blank in `frontend/.env`.
+
+### Shared or production networks
+
+Start without `--no-auth`. The server prints a token:
+
+```
+Enrollment token: abc123xyz...
+```
+
+Configure the agent:
+```js
+insidr.init(new WebSocketSink({
+  url: 'ws://YOUR_IP:9229',
+  enrollmentToken: 'abc123xyz...'
+}));
+```
+
+Configure the dashboard (`frontend/.env`):
+```
+REACT_APP_WS_TOKEN=abc123xyz...
+```
+
+Set a fixed token:
 ```bash
-python debug_server.py --db-path /var/log/insidr/events.db
+python debug_server.py --token my-secret-token
+# or set environment variable:
+INSIDR_ENROLLMENT_TOKEN=my-secret-token python debug_server.py
+```
+
+---
+
+## Backend flags
+
+```
+python debug_server.py [options]
+
+  --no-auth              Disable token auth (local dev only — never use on shared networks)
+  --token <value>        Set enrollment token explicitly
+  --ws-port <n>          Device WebSocket port (default 9229)
+  --http-port <n>        HTTP API port (default 9231)
+  --no-db                Memory-only mode, no SQLite persistence
+  --db-path <path>       Custom SQLite file path (default insidr_events.db)
 ```
 
 ---
@@ -223,86 +194,110 @@ python debug_server.py --db-path /var/log/insidr/events.db
 ```
 frontend/
   src/
-    App.js                  # Remote dashboard UI
+    App.js                       # Fleet dashboard + 10-tab device view
+    App.css
     hooks/
-      useRemoteSession.js   # WebSocket connection to server port 9230
+      useRemoteSession.js        # WebSocket connection to server port 9230
     insidr/
-      agent.js              # Embedded agent (used in local/embedded mode)
+      agent.js                   # Agent core — EventBus + instrumentation classes
       transports/
-        websocket.js        # WebSocket transport sink
-        localStorage.js     # Local storage sink
+        websocket.js             # WebSocket sink — IDB buffer, batching, auth, PII redaction
+        localStorage.js          # LocalStorage sink (offline / embedded use)
 
 backend/
-  debug_server.py           # WebSocket relay + SQLite event store
+  debug_server.py                # WebSocket relay + SQLite store + HTTP API
   requirements.txt
 ```
 
-**Ports:**
-- `9229` — devices connect here (WebSocket)
-- `9230` — dashboard connects here (WebSocket subscriber)
-- `9231` — HTTP REST API (`/api/devices`, `/api/device/:id/events`)
+### Ports
+
+| Port | Purpose |
+|------|---------|
+| `9229` | Devices connect (WebSocket) |
+| `9230` | Dashboard connects (WebSocket subscriber) |
+| `9231` | HTTP REST API |
 
 ---
 
-## What You Can and Can't Debug Remotely
+## Crash log persistence (the Heisenbug feature)
+
+All events are written to SQLite the moment they arrive. A device that crashes at 3am has its full event history visible when you open the dashboard in the morning — including the error that caused the crash. History survives server restarts. Historical (offline) devices appear in the device list with a grey dot and all their events intact.
+
+Disable persistence (memory-only):
+```bash
+python debug_server.py --no-db
+```
+
+---
+
+## Testing locally
+
+The fastest way to simulate a device without real hardware:
+
+1. Start the backend: `python debug_server.py --no-auth`
+2. Start the dashboard: `yarn start`
+3. Open a second browser tab and paste into its console:
+
+```js
+// Simulates a device connecting — paste into any browser tab console
+fetch('https://jsonplaceholder.typicode.com/todos/1'); // generate a network event
+console.log('hello from test device');
+console.error('test error');
+```
+
+Then open `http://localhost:3000`, the device appears immediately.
+
+---
+
+## What you can and can't debug remotely
 
 | Capability | insidr | Native DevTools |
 |-----------|--------|----------------|
 | Console logs (all levels) | ✅ | ✅ |
 | Network requests + responses | ✅ | ✅ |
-| JavaScript errors + stack traces | ✅ | ✅ |
+| JS errors + stack traces | ✅ | ✅ |
 | Performance metrics + memory | ✅ | ✅ |
-| Device info + screen resolution | ✅ | ✅ |
+| Page lifecycle events | ✅ | ✅ |
+| Battery status | ✅ | ❌ |
 | Remote script execution | ✅ | ✅ |
 | Crash log persistence | ✅ | ❌ |
 | Works without developer mode | ✅ | ❌ |
 | Platform independent | ✅ | ❌ |
+| Survives offline / screen-off | ✅ | ❌ |
 | Pause execution / breakpoints | ❌ | ✅ |
 | Step through code | ❌ | ✅ |
 | Edit live source files | ❌ | ✅ |
 
 ---
 
-## Supported Platforms
+## Browser API compatibility
 
-Any device running a Chromium-based browser, including:
+| Feature | Chrome | Edge | Firefox | Safari | WebOS Chromium |
+|---------|--------|------|---------|--------|----------------|
+| Console capture | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Fetch interception | ✅ | ✅ | ✅ | ✅ | ✅ |
+| XHR interception | ✅ | ✅ | ✅ | ✅ | ✅ |
+| sendBeacon | ✅ | ✅ | ✅ | ✅ | ✅ |
+| performance.memory | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Battery API | ✅ | ✅ | ✅ | ❌ | varies |
+| IndexedDB buffer | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Page Lifecycle API | ✅ | ✅ | partial | partial | partial |
 
-- LG WebOS (signageOS)
-- Samsung Tizen (signageOS)
+All missing APIs are handled gracefully.
+
+---
+
+## Supported platforms
+
+- LG WebOS (via signageOS or direct)
+- Samsung Tizen (via signageOS)
 - BrightSign
-- Android (Chrome, WebView)
+- Android TV / Android WebView
 - Raspberry Pi (Chromium)
-- Windows / Mac / Linux (all browsers for development)
-
----
-
-## Browser Compatibility
-
-| Browser | Console | Network | Errors | Memory API |
-|---------|---------|---------|--------|------------|
-| Chrome 90+ | ✅ | ✅ | ✅ | ✅ |
-| Edge 90+ | ✅ | ✅ | ✅ | ✅ |
-| Firefox 88+ | ✅ | ✅ | ✅ | ❌ |
-| Safari 14+ | ✅ | ✅ | ✅ | ❌ |
-| LG WebOS (Chromium) | ✅ | ✅ | ✅ | ❌ |
-
----
-
-## Roadmap
-
-- [ ] Persist device info to SQLite (currently reconstructed from events)
-- [ ] Export full session as JSON from dashboard
-- [ ] Auth token support for multi-team deployments
-- [ ] Docker image for easy server deployment
-- [ ] Cloud-hosted relay option (for debugging devices not on local network)
-- [ ] signageOS SDK integration
+- Windows / Mac / Linux (for development and testing)
 
 ---
 
 ## License
 
-MIT License
-
----
-
-**insidr** — built by a signage developer, for signage developers.
+MIT — built by a signage developer, for signage developers.
