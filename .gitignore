@@ -34,7 +34,7 @@ dist
 
 *token.json*
 *credentials.json*
-
+.insidr_token
 # Logs and debug files
 npm-debug.log*
 yarn-debug.log*

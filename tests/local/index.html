@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head><title>insidr test app</title></head>
+<body>
+
+<h1>insidr Test App</h1>
+<button onclick="doFetch()">Fetch JSON</button>
+<button onclick="doBadFetch()">Fetch (fail)</button>
+<button onclick="doError()">Throw Error</button>
+<button onclick="doReject()">Unhandled Rejection</button>
+<button onclick="doConsole()">Console Logs</button>
+<button onclick="doVideo()">Add Video</button>
+
+<div id="output" style="font-family:monospace;margin-top:20px"></div>
+
+<script>
+  function log(msg) {
+    document.getElementById('output').innerHTML += '<div>' + msg + '</div>';
+  }
+
+  function doFetch() {
+    log('→ fetching...');
+    fetch('https://jsonplaceholder.typicode.com/todos/1')
+      .then(r => r.json()).then(d => log('← ' + JSON.stringify(d)));
+    fetch('https://jsonplaceholder.typicode.com/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'test post', body: 'hello', userId: 1 })
+    }).then(r => r.json()).then(d => log('← POST ' + d.id));
+  }
+
+  function doBadFetch() {
+    fetch('https://this-url-does-not-exist.invalid/api/data');
+  }
+
+  function doError() {
+    null.triggerTypeError();
+  }
+
+  function doReject() {
+    Promise.reject(new Error('unhandled promise rejection'));
+  }
+
+  function doConsole() {
+    console.log('log message', { nested: { value: 42 } });
+    console.warn('warning: something looks off');
+    console.error('error: something went wrong');
+    console.info('info: page loaded');
+    console.debug('debug: verbose detail');
+  }
+
+  function doVideo() {
+    const v = document.createElement('video');
+    v.src = 'https://this-video-does-not-exist.invalid/video.mp4';
+    v.autoplay = true;
+    document.body.appendChild(v);
+    log('video element added — will trigger media.error');
+  }
+</script>
+
+<!-- insidr agent — inject FIRST, before your app if possible -->
+<!-- Using inline IIFE for zero-dependency testing -->
+<script>
+(function() {
+  var SERVER_URL = 'ws://localhost:9229';
+
+  var DEVICE_ID = (function() {
+    try {
+      var id = localStorage.getItem('insidr_device_id');
+      if (!id) {
+        id = 'dev_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+        localStorage.setItem('insidr_device_id', id);
+      }
+      return id;
+    } catch(e) { return 'dev_' + Date.now(); }
+  })();
+
+  var SESSION_ID = 'sess_' + Date.now();
+  var ws, queue = [], connected = false, seq = 0;
+
+  function emit(type, payload) {
+    var ev = {
+      type: type, payload: payload,
+      timestamp: Date.now(),
+      deviceId: DEVICE_ID, sessionId: SESSION_ID, seq: ++seq
+    };
+    if (connected && ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: '_batch', events: [ev] }));
+    } else {
+      queue.push(ev);
+    }
+  }
+
+  function connect() {
+    try { ws = new WebSocket(SERVER_URL); } catch(e) { setTimeout(connect, 3000); return; }
+    ws.onopen = function() {
+      connected = true;
+      ws.send(JSON.stringify({
+        type: '_auth',
+        payload: { deviceId: DEVICE_ID, userAgent: navigator.userAgent, url: location.href, sessionId: SESSION_ID, enrollmentToken: null }
+      }));
+      // Flush queue as a batch
+      if (queue.length) {
+        ws.send(JSON.stringify({ type: '_batch', events: queue.splice(0) }));
+      }
+      emit('device.info', {
+        userAgent: navigator.userAgent, platform: navigator.platform,
+        language: navigator.language, onLine: navigator.onLine,
+        screenResolution: screen.width + 'x' + screen.height,
+        viewport: window.innerWidth + 'x' + window.innerHeight,
+        cookieEnabled: navigator.cookieEnabled,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        deviceMemory: navigator.deviceMemory
+      });
+    };
+    ws.onclose = function() { connected = false; setTimeout(connect, 3000); };
+    ws.onerror = function() {};
+    ws.onmessage = function(m) {
+      try {
+        var d = JSON.parse(m.data);
+        if (d.type === 'command' && d.command === 'agent.reload') window.location.reload();
+        if (d.type === 'command' && d.command === 'script.execute') {
+          try { var r = eval(d.payload.code); emit('script.result', { success: true, result: String(r) }); }
+          catch(e) { emit('script.result', { success: false, error: e.message }); }
+        }
+      } catch(e) {}
+    };
+  }
+
+  // Console interception
+  ['log','warn','error','info','debug'].forEach(function(l) {
+    var orig = console[l];
+    console[l] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      emit('console', { level: l, args: args.map(function(a) {
+        return typeof a === 'object' ? JSON.stringify(a) : String(a);
+      })});
+      orig.apply(console, arguments);
+    };
+  });
+
+  // Error capture
+  window.addEventListener('error', function(e) {
+    emit('error', { message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno });
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    emit('error.unhandled_rejection', { reason: String(e.reason) });
+  });
+
+  // Media errors
+  document.addEventListener('error', function(e) {
+    var el = e.target;
+    if (el && (el.tagName === 'VIDEO' || el.tagName === 'AUDIO')) {
+      emit('media.error', { tag: el.tagName, src: el.currentSrc || el.src,
+        networkState: el.networkState, readyState: el.readyState,
+        error: el.error ? { code: el.error.code, message: el.error.message } : null });
+    }
+  }, true);
+
+  // Fetch interception
+  if (window.fetch) {
+    var origFetch = window.fetch;
+    window.fetch = function() {
+      var args = arguments;
+      var id = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+      var url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
+      var method = (args[1] && args[1].method) || 'GET';
+      var t = performance.now();
+      emit('network.request', { requestId: id, url: url, method: method, headers: (args[1] && args[1].headers) || {} });
+      return origFetch.apply(window, args).then(function(r) {
+        var clone = r.clone();
+        clone.text().then(function(body) {
+          emit('network.response', { requestId: id, status: r.status, statusText: r.statusText,
+            headers: Object.fromEntries ? Object.fromEntries(r.headers.entries()) : {},
+            responseBody: body.substr(0, 2000), duration: performance.now() - t,
+            size: body.length });
+        });
+        return r;
+      }).catch(function(e) {
+        emit('network.error', { requestId: id, error: e.message, duration: performance.now() - t });
+        throw e;
+      });
+    };
+  }
+
+  // FPS
+  var frames = 0, lastFps = performance.now();
+  (function fps() {
+    frames++;
+    var now = performance.now();
+    if (now - lastFps >= 1000) {
+      emit('performance.fps', { fps: Math.round(frames * 1000 / (now - lastFps)) });
+      frames = 0; lastFps = now;
+    }
+    requestAnimationFrame(fps);
+  })();
+
+  // Metrics every 5s
+  setInterval(function() {
+    var mem = performance.memory ? {
+      usedJSHeapSize: performance.memory.usedJSHeapSize,
+      totalJSHeapSize: performance.memory.totalJSHeapSize,
+      jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+    } : null;
+    emit('performance.metrics', { memory: mem, timing: null });
+  }, 5000);
+
+  // Visibility
+  document.addEventListener('visibilitychange', function() {
+    emit('page.visibility', { visibilityState: document.visibilityState, hidden: document.hidden });
+  });
+
+  connect();
+  console.log('[insidr] agent connected to', SERVER_URL);
+})();
+</script>
+
+</body>
+</html>
