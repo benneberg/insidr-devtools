@@ -1,0 +1,30 @@
+name: CCC Context Refresh
+
+on:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 3 * * *'   # nightly at 3am UTC
+  workflow_dispatch:       # manual trigger (or via AI/API call)
+
+jobs:
+  generate-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install CCC
+        run: pip install ccc-contextcompiler
+
+      - name: Run CCC
+        run: ccc   # generates .llm-context/ in the repo root
+
+      - name: Commit updated context
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: refresh CCC context [skip ci]"
+          file_pattern: ".llm-context/**"
